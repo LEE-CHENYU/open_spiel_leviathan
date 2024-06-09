@@ -342,6 +342,7 @@ if (OPEN_SPIEL_ENABLE_PYTHON_MISC)
       egt/alpharank_visualizer_test.py
       egt/visualization_test.py
       games/kuhn_poker_test.py
+      games/tuhn_poker_test.py
       voting/maximal_lotteries_test.py
       tests/matrix_game_utils_test.py
   )

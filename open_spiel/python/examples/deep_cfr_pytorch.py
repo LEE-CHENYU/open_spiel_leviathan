@@ -22,6 +22,7 @@ from open_spiel.python import policy
 from open_spiel.python.algorithms import expected_game_score
 import pyspiel
 from open_spiel.python.pytorch import deep_cfr
+import torch
 
 FLAGS = flags.FLAGS
 
@@ -68,6 +69,10 @@ def main(unused_argv):
   logging.info("Computed player 1 value: %.2f (expected: %.2f).",
                average_policy_values[1], 1 / 18)
 
+  # Save the trained models
+  torch.save(deep_cfr_solver._policy_network.state_dict(), 'policy_network.pth')
+  for player_index in range(len(deep_cfr_solver._advantage_networks)):
+      torch.save(deep_cfr_solver._advantage_networks[player_index].state_dict(), f'advantage_network_player_{player_index}.pth')
 
 if __name__ == "__main__":
   app.run(main)
