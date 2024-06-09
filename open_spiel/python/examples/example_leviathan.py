@@ -57,7 +57,7 @@ def main(_):
       action = np.random.choice(action_list, p=prob_list)
       print("Sampled outcome: ",
             state.action_to_string(state.current_player(), action))
-      state.apply_action(action)
+      # state.apply_action(action)
     # elif state.is_simultaneous_node():
     #   # Simultaneous node: sample actions for all players.
     #   random_choice = lambda a: np.random.choice(a) if a else [0]
