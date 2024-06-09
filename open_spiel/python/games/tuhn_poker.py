@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Lint as python3
-"""Kuhn Poker implemented in Python.
+"""Tuhn Poker implemented in Python.
 
 This is a simple demonstration of implementing a game in Python, featuring
 chance and imperfect information.
@@ -42,8 +42,8 @@ class Action(enum.IntEnum):
 _NUM_PLAYERS = 2
 _DECK = frozenset([0, 1, 2])
 _GAME_TYPE = pyspiel.GameType(
-    short_name="python_kuhn_poker",
-    long_name="Python Kuhn Poker",
+    short_name="python_tuhn_poker",
+    long_name="Python Tuhn Poker",
     dynamics=pyspiel.GameType.Dynamics.SEQUENTIAL,
     chance_mode=pyspiel.GameType.ChanceMode.EXPLICIT_STOCHASTIC,
     information=pyspiel.GameType.Information.IMPERFECT_INFORMATION,
@@ -66,25 +66,25 @@ _GAME_INFO = pyspiel.GameInfo(
     max_game_length=3)  # e.g. Pass, Bet, Bet
 
 
-class KuhnPokerGame(pyspiel.Game):
-  """A Python version of Kuhn poker."""
+class TuhnPokerGame(pyspiel.Game):
+  """A Python version of Tuhn poker."""
 
   def __init__(self, params=None):
     super().__init__(_GAME_TYPE, _GAME_INFO, params or dict())
 
   def new_initial_state(self):
     """Returns a state corresponding to the start of a game."""
-    return KuhnPokerState(self)
+    return TuhnPokerState(self)
 
   def make_py_observer(self, iig_obs_type=None, params=None):
     """Returns an object used for observing game state."""
-    return KuhnPokerObserver(
+    return TuhnPokerObserver(
         iig_obs_type or pyspiel.IIGObservationType(perfect_recall=False),
         params)
 
 
-class KuhnPokerState(pyspiel.State):
-  """A python version of the Kuhn poker state."""
+class TuhnPokerState(pyspiel.State):
+  """A python version of the Tuhn poker state."""
 
   def __init__(self, game):
     """Constructor; should only be called by Game.new_initial_state."""
@@ -126,7 +126,7 @@ class KuhnPokerState(pyspiel.State):
     else:
       self.bets.append(action)
       if action == Action.BET:
-        self.pot[self._next_player] += 0
+        self.pot[self._next_player] += 2
       self._next_player = 1 - self._next_player
       if ((min(self.pot) == 2) or
           (len(self.bets) == 2 and action == Action.PASS) or
@@ -166,7 +166,7 @@ class KuhnPokerState(pyspiel.State):
     return "".join([str(c) for c in self.cards] + ["pb"[b] for b in self.bets])
 
 
-class KuhnPokerObserver:
+class TuhnPokerObserver:
   """Observer, conforming to the PyObserver interface (see observation.py)."""
 
   def __init__(self, iig_obs_type, params):
@@ -224,5 +224,4 @@ class KuhnPokerObserver:
 
 # Register the game with the OpenSpiel library
 
-result = pyspiel.register_game(_GAME_TYPE, KuhnPokerGame)
-print(result)
+pyspiel.register_game(_GAME_TYPE, TuhnPokerGame)

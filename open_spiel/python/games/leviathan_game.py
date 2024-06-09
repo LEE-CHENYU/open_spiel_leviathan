@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Lint as python3
-"""Kuhn Poker implemented in Python.
+"""Tuhn Poker implemented in Python.
 
 This is a simple demonstration of implementing a game in Python, featuring
 chance and imperfect information.
@@ -36,21 +36,30 @@ import pyspiel
 
 class Action(enum.IntEnum):
   PASS = 0
-  BET = 1
+  ACT = 1
+  LEAD = 2
+  FOLLOW = 3
+  OFFER = 4
+  ATTACK = 5
 
-
-_NUM_PLAYERS = 2
+class DynamicAction:
+    @staticmethod
+    def follow_chain(action_board):
+        """Returns a list of available actions based on the action board."""
+        return [i for i, chain in enumerate(action_board)]
+      
+_NUM_PLAYERS = 3
 _DECK = frozenset([0, 1, 2])
 _GAME_TYPE = pyspiel.GameType(
-    short_name="python_kuhn_poker",
-    long_name="Python Kuhn Poker",
+    short_name="python_leviathan",
+    long_name="Python Leviathan",
     dynamics=pyspiel.GameType.Dynamics.SEQUENTIAL,
     chance_mode=pyspiel.GameType.ChanceMode.EXPLICIT_STOCHASTIC,
-    information=pyspiel.GameType.Information.IMPERFECT_INFORMATION,
-    utility=pyspiel.GameType.Utility.ZERO_SUM,
+    information=pyspiel.GameType.Information.PERFECT_INFORMATION,
+    utility=pyspiel.GameType.Utility.GENERAL_SUM,
     reward_model=pyspiel.GameType.RewardModel.TERMINAL,
-    max_num_players=_NUM_PLAYERS,
-    min_num_players=_NUM_PLAYERS,
+    max_num_players=2,
+    min_num_players=5,
     provides_information_state_string=True,
     provides_information_state_tensor=True,
     provides_observation_string=True,
@@ -62,36 +71,37 @@ _GAME_INFO = pyspiel.GameInfo(
     num_players=_NUM_PLAYERS,
     min_utility=-2.0,
     max_utility=2.0,
-    utility_sum=0.0,
-    max_game_length=3)  # e.g. Pass, Bet, Bet
+    utility_sum=None,
+    max_game_length=100)
 
 
-class KuhnPokerGame(pyspiel.Game):
-  """A Python version of Kuhn poker."""
+class LevithanGame(pyspiel.Game):
+  """A Python version of Levithan."""
 
   def __init__(self, params=None):
     super().__init__(_GAME_TYPE, _GAME_INFO, params or dict())
 
   def new_initial_state(self):
     """Returns a state corresponding to the start of a game."""
-    return KuhnPokerState(self)
+    return LevithanState(self)
 
-  def make_py_observer(self, iig_obs_type=None, params=None):
-    """Returns an object used for observing game state."""
-    return KuhnPokerObserver(
-        iig_obs_type or pyspiel.IIGObservationType(perfect_recall=False),
-        params)
+  # def make_py_observer(self, iig_obs_type=None, params=None):
+  #   """Returns an object used for observing game state."""
+  #   return LevithanObserver(
+  #       iig_obs_type or pyspiel.IIGObservationType(perfect_recall=True),
+  #       params)
 
 
-class KuhnPokerState(pyspiel.State):
-  """A python version of the Kuhn poker state."""
+class LevithanState(pyspiel.State):
+  """A python version of the Levithan state."""
 
   def __init__(self, game):
     """Constructor; should only be called by Game.new_initial_state."""
     super().__init__(game)
     self.cards = []
-    self.bets = []
-    self.pot = [2.0, 1.0]
+    self.action_board = []
+    self.stage = 1
+    # self.pot = [2.0, 1.0]
     self._game_over = False
     self._next_player = 0
 
@@ -108,9 +118,12 @@ class KuhnPokerState(pyspiel.State):
       return self._next_player
 
   def _legal_actions(self, player):
-    """Returns a list of legal actions, sorted in ascending order."""
+    """Returns a list of legal actions, sorted in ascending cards."""
     assert player >= 0
-    return [Action.PASS, Action.BET]
+    if self.stage == 1:
+      return [Action.PASS, Action.ACT]
+    elif self.stage == 2:
+      return [Action.LEAD, DynamicAction.follow_chain(self.action_board)]
 
   def chance_outcomes(self):
     """Returns the possible chance outcomes and their probabilities."""
@@ -121,17 +134,33 @@ class KuhnPokerState(pyspiel.State):
 
   def _apply_action(self, action):
     """Applies the specified action to the state."""
+    agent_no = self._next_player
+    chain_selection = 0
+
+    # Check if the game is at a chance node
     if self.is_chance_node():
-      self.cards.append(action)
+        self.cards.append(action)
     else:
-      self.bets.append(action)
-      if action == Action.BET:
-        self.pot[self._next_player] += 0
-      self._next_player = 1 - self._next_player
-      if ((min(self.pot) == 2) or
-          (len(self.bets) == 2 and action == Action.PASS) or
-          (len(self.bets) == 3)):
-        self._game_over = True
+        # Check if the agent decides to take an action or pass
+        if action == Action.ACT:
+            # Check if the agent decides to lead or follow
+            if action == Action.LEAD:
+                self.action_board.append([])
+                self.action_board[len(self.action_board)-1].append(agent_no)
+                # self.action_board[len(self.action_board)-1].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
+            else:
+                chain_selection == action
+                self.self.action_board[int(chain_selection)]
+                # self.action_board[int(chain_selection)].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
+        else:
+            print("Decision passed.")
+
+        # Update the next player
+        self._next_player = (self._next_player + 1) % self._NUM_PLAYERS
+
+        # Check if the game is over
+        if self._check_game_over():
+            self._game_over = True
 
   def _action_to_string(self, player, action):
     """Action -> string."""
@@ -161,12 +190,12 @@ class KuhnPokerState(pyspiel.State):
     else:
       return [-winnings, winnings]
 
-  def __str__(self):
-    """String for debug purposes. No particular semantics are required."""
-    return "".join([str(c) for c in self.cards] + ["pb"[b] for b in self.bets])
+  # def __str__(self):
+  #   """String for debug purposes. No particular semantics are required."""
+  #   return "".join([str(c) for c in self.cards] + ["pb"[b] for b in self.bets])
 
-
-class KuhnPokerObserver:
+## omit for the perfect information game.
+class LevithanObserver:
   """Observer, conforming to the PyObserver interface (see observation.py)."""
 
   def __init__(self, iig_obs_type, params):
@@ -224,5 +253,4 @@ class KuhnPokerObserver:
 
 # Register the game with the OpenSpiel library
 
-result = pyspiel.register_game(_GAME_TYPE, KuhnPokerGame)
-print(result)
+pyspiel.register_game(_GAME_TYPE, LevithanGame)
