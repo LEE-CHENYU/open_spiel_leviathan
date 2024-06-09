@@ -104,6 +104,7 @@ class LevithanState(pyspiel.State):
     # self.pot = [2.0, 1.0]
     self._game_over = False
     self._next_player = 0
+    self._NUM_PLAYERS = 3
 
   # OpenSpiel (PySpiel) API functions are below. This is the standard set that
   # should be implemented by every sequential-move game with chance.
@@ -150,7 +151,8 @@ class LevithanState(pyspiel.State):
                 # self.action_board[len(self.action_board)-1].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
             else:
                 chain_selection == action
-                self.self.action_board[int(chain_selection)]
+                print(chain_selection)
+                self.action_board[int(chain_selection)]
                 # self.action_board[int(chain_selection)].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
         else:
             print("Decision passed.")
@@ -169,7 +171,7 @@ class LevithanState(pyspiel.State):
     elif action == Action.PASS:
       return "Pass"
     else:
-      return "Bet"
+      return "ACT"
 
   def is_terminal(self):
     """Returns True if the game is over."""
@@ -190,65 +192,66 @@ class LevithanState(pyspiel.State):
     else:
       return [-winnings, winnings]
 
-  # def __str__(self):
-  #   """String for debug purposes. No particular semantics are required."""
-  #   return "".join([str(c) for c in self.cards] + ["pb"[b] for b in self.bets])
+  def __str__(self):
+    """String for debug purposes. No particular semantics are required."""
+    return ""
 
 ## omit for the perfect information game.
-class LevithanObserver:
-  """Observer, conforming to the PyObserver interface (see observation.py)."""
 
-  def __init__(self, iig_obs_type, params):
-    """Initializes an empty observation tensor."""
-    if params:
-      raise ValueError(f"Observation parameters not supported; passed {params}")
+# class LevithanObserver:
+#   """Observer, conforming to the PyObserver interface (see observation.py)."""
 
-    # Determine which observation pieces we want to include.
-    pieces = [("player", 2, (2,))]
-    if iig_obs_type.private_info == pyspiel.PrivateInfoType.SINGLE_PLAYER:
-      pieces.append(("private_card", 3, (3,)))
-    if iig_obs_type.public_info:
-      if iig_obs_type.perfect_recall:
-        pieces.append(("betting", 6, (3, 2)))
-      else:
-        pieces.append(("pot_contribution", 2, (2,)))
+#   def __init__(self, iig_obs_type, params):
+#     """Initializes an empty observation tensor."""
+#     if params:
+#       raise ValueError(f"Observation parameters not supported; passed {params}")
 
-    # Build the single flat tensor.
-    total_size = sum(size for name, size, shape in pieces)
-    self.tensor = np.zeros(total_size, np.float32)
+#     # Determine which observation pieces we want to include.
+#     pieces = [("player", 2, (2,))]
+#     if iig_obs_type.private_info == pyspiel.PrivateInfoType.SINGLE_PLAYER:
+#       pieces.append(("private_card", 3, (3,)))
+#     if iig_obs_type.public_info:
+#       if iig_obs_type.perfect_recall:
+#         pieces.append(("betting", 6, (3, 2)))
+#       else:
+#         pieces.append(("pot_contribution", 2, (2,)))
 
-    # Build the named & reshaped views of the bits of the flat tensor.
-    self.dict = {}
-    index = 0
-    for name, size, shape in pieces:
-      self.dict[name] = self.tensor[index:index + size].reshape(shape)
-      index += size
+#     # Build the single flat tensor.
+#     total_size = sum(size for name, size, shape in pieces)
+#     self.tensor = np.zeros(total_size, np.float32)
 
-  def set_from(self, state, player):
-    """Updates `tensor` and `dict` to reflect `state` from PoV of `player`."""
-    self.tensor.fill(0)
-    if "player" in self.dict:
-      self.dict["player"][player] = 1
-    if "private_card" in self.dict and len(state.cards) > player:
-      self.dict["private_card"][state.cards[player]] = 1
-    if "pot_contribution" in self.dict:
-      self.dict["pot_contribution"][:] = state.pot
-    if "betting" in self.dict:
-      for turn, action in enumerate(state.bets):
-        self.dict["betting"][turn, action] = 1
+#     # Build the named & reshaped views of the bits of the flat tensor.
+#     self.dict = {}
+#     index = 0
+#     for name, size, shape in pieces:
+#       self.dict[name] = self.tensor[index:index + size].reshape(shape)
+#       index += size
 
-  def string_from(self, state, player):
-    """Observation of `state` from the PoV of `player`, as a string."""
-    pieces = []
-    if "player" in self.dict:
-      pieces.append(f"p{player}")
-    if "private_card" in self.dict and len(state.cards) > player:
-      pieces.append(f"card:{state.cards[player]}")
-    if "pot_contribution" in self.dict:
-      pieces.append(f"pot[{int(state.pot[0])} {int(state.pot[1])}]")
-    if "betting" in self.dict and state.bets:
-      pieces.append("".join("pb"[b] for b in state.bets))
-    return " ".join(str(p) for p in pieces)
+#   def set_from(self, state, player):
+#     """Updates `tensor` and `dict` to reflect `state` from PoV of `player`."""
+#     self.tensor.fill(0)
+#     if "player" in self.dict:
+#       self.dict["player"][player] = 1
+#     if "private_card" in self.dict and len(state.cards) > player:
+#       self.dict["private_card"][state.cards[player]] = 1
+#     if "pot_contribution" in self.dict:
+#       self.dict["pot_contribution"][:] = state.pot
+#     if "betting" in self.dict:
+#       for turn, action in enumerate(state.bets):
+#         self.dict["betting"][turn, action] = 1
+
+#   def string_from(self, state, player):
+#     """Observation of `state` from the PoV of `player`, as a string."""
+#     pieces = []
+#     if "player" in self.dict:
+#       pieces.append(f"p{player}")
+#     if "private_card" in self.dict and len(state.cards) > player:
+#       pieces.append(f"card:{state.cards[player]}")
+#     if "pot_contribution" in self.dict:
+#       pieces.append(f"pot[{int(state.pot[0])} {int(state.pot[1])}]")
+#     if "betting" in self.dict and state.bets:
+#       pieces.append("".join("pb"[b] for b in state.bets))
+#     return " ".join(str(p) for p in pieces)
 
 
 # Register the game with the OpenSpiel library

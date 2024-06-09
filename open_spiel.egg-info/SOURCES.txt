@@ -1812,6 +1812,7 @@ open_spiel/python/examples/response_graph_ucb_2x2_game.py
 open_spiel/python/examples/response_graph_ucb_sample_complexity.py
 open_spiel/python/examples/rl_example.py
 open_spiel/python/examples/rl_main_loop.py
+open_spiel/python/examples/rl_module_kuhn_poker_example.py
 open_spiel/python/examples/rl_response.py
 open_spiel/python/examples/roshambo_population_example.py
 open_spiel/python/examples/single_agent_catch.py
@@ -1866,13 +1867,18 @@ open_spiel/python/games/iterated_prisoners_dilemma.py
 open_spiel/python/games/iterated_prisoners_dilemma_test.py
 open_spiel/python/games/kuhn_poker.py
 open_spiel/python/games/kuhn_poker_test.py
+open_spiel/python/games/leviathan_game.py
+open_spiel/python/games/leviathan_game_gpt.py
 open_spiel/python/games/liars_poker.py
 open_spiel/python/games/liars_poker_test.py
+open_spiel/python/games/rl_module_kuhn_poker_example.py
 open_spiel/python/games/team_dominoes.py
 open_spiel/python/games/team_dominoes_test.py
 open_spiel/python/games/test.py
 open_spiel/python/games/tic_tac_toe.py
 open_spiel/python/games/tic_tac_toe_test.py
+open_spiel/python/games/tuhn_poker.py
+open_spiel/python/games/tuhn_poker_test.py
 open_spiel/python/games/chat_games/__init__.py
 open_spiel/python/games/chat_games/chat_game_base.py
 open_spiel/python/games/chat_games/configs/__init__.py
