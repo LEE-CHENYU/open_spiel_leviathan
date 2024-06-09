@@ -194,18 +194,18 @@ class LevithanState(pyspiel.State):
 
   def returns(self):
     """Total reward for each player over the course of the game so far."""
-    pot = self.pot
-    winnings = float(min(pot))
+    # pot = self.pot
+    # winnings = float(min(pot))
     if not self._game_over:
-      return [0., 0.]
-    elif pot[0] > pot[1]:
-      return [winnings, -winnings]
-    elif pot[0] < pot[1]:
-      return [-winnings, winnings]
-    elif self.cards[0] > self.cards[1]:
-      return [winnings, -winnings]
+      return [0., 0., 0.]
+    # elif pot[0] > pot[1]:
+    #   return [winnings, -winnings]
+    # elif pot[0] < pot[1]:
+    #   return [-winnings, winnings]
+    # elif self.cards[0] > self.cards[1]:
+    #   return [winnings, -winnings]
     else:
-      return [-winnings, winnings]
+      return [1, 1, 1]
 
   def __str__(self):
     """String for debug purposes. No particular semantics are required."""

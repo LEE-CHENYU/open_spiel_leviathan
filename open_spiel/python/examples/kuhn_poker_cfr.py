@@ -22,7 +22,7 @@ import pyspiel
 
 
 def main(_):
-  game = pyspiel.load_game("python_tuhn_poker")
+  game = pyspiel.load_game("python_leviathan")
 
   cfr_solver = cfr.CFRSolver(game)
   iterations = 1000
