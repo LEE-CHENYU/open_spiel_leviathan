@@ -35,12 +35,12 @@ import pyspiel
 
 
 class Action(enum.IntEnum):
-  PASS = 0
-  ACT = 1
-  LEAD = 2
-  FOLLOW = 3
-  OFFER = 4
-  ATTACK = 5
+  PASS = -7
+  ACT = -2
+  LEAD = -3
+  FOLLOW = -4
+  OFFER = -5
+  ATTACK = -6
 
 class DynamicAction:
     @staticmethod
@@ -105,6 +105,8 @@ class LevithanState(pyspiel.State):
     self._game_over = False
     self._next_player = 0
     self._NUM_PLAYERS = 3
+    self.round = 0
+    self.current_action = None
 
   # OpenSpiel (PySpiel) API functions are below. This is the standard set that
   # should be implemented by every sequential-move game with chance.
@@ -124,7 +126,7 @@ class LevithanState(pyspiel.State):
     if self.stage == 1:
       return [Action.PASS, Action.ACT]
     elif self.stage == 2:
-      return [Action.LEAD, DynamicAction.follow_chain(self.action_board)]
+      return [Action.LEAD] + DynamicAction.follow_chain(self.action_board)
 
   def chance_outcomes(self):
     """Returns the possible chance outcomes and their probabilities."""
@@ -133,6 +135,10 @@ class LevithanState(pyspiel.State):
     p = 1.0 / len(outcomes)
     return [(o, p) for o in outcomes]
 
+  def _check_game_over(self):
+    if self.round == 10:
+      self._game_over = True
+  
   def _apply_action(self, action):
     """Applies the specified action to the state."""
     agent_no = self._next_player
@@ -145,24 +151,33 @@ class LevithanState(pyspiel.State):
         # Check if the agent decides to take an action or pass
         if action == Action.ACT:
             # Check if the agent decides to lead or follow
-            if action == Action.LEAD:
-                self.action_board.append([])
-                self.action_board[len(self.action_board)-1].append(agent_no)
-                # self.action_board[len(self.action_board)-1].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
-            else:
-                chain_selection == action
-                print(chain_selection)
-                self.action_board[int(chain_selection)]
-                # self.action_board[int(chain_selection)].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
-        else:
-            print("Decision passed.")
+            self.current_action = Action.ACT
+            self.stage = 2
+        elif action == Action.PASS:
+            self.current_action = Action.PASS
+            self.stage = 1
+        elif action == Action.LEAD:
+            self.action_board.append([])
+            self.action_board[len(self.action_board)-1].append(agent_no)
+            # self.action_board[len(self.action_board)-1].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
+            self.current_action = Action.LEAD
+            self.stage = 1
+        elif action > 0:
+            chain_selection == action
+            print(chain_selection)
+            self.action_board[int(chain_selection)]
+            # self.action_board[int(chain_selection)].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
+            self.current_action = Action.FOLLOW
+            self.stage = 1
 
         # Update the next player
-        self._next_player = (self._next_player + 1) % self._NUM_PLAYERS
+        if self.current_action != Action.ACT:
+          self._next_player = (self._next_player + 1) % self._NUM_PLAYERS
+          self.round += 1
+          self.current_action = None
 
         # Check if the game is over
-        if self._check_game_over():
-            self._game_over = True
+        self._check_game_over()
 
   def _action_to_string(self, player, action):
     """Action -> string."""

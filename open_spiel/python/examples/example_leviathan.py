@@ -22,6 +22,8 @@ import numpy as np
 from open_spiel.python import games  # pylint: disable=unused-import
 import pyspiel
 
+from open_spiel.python.games.leviathan_game import Action, LevithanState
+
 FLAGS = flags.FLAGS
 
 # Game strings can just contain the name or the name followed by parameters
@@ -40,7 +42,7 @@ def main(_):
   game = pyspiel.load_game(FLAGS.game_string)
 
   # Create the initial state
-  state = game.new_initial_state()
+  state: LevithanState = game.new_initial_state()
 
   # Print the initial state
   print(str(state))
@@ -57,7 +59,8 @@ def main(_):
       action = np.random.choice(action_list, p=prob_list)
       print("Sampled outcome: ",
             state.action_to_string(state.current_player(), action))
-      # state.apply_action(action)
+      state.apply_action(action)
+      print(state.cards)
     # elif state.is_simultaneous_node():
     #   # Simultaneous node: sample actions for all players.
     #   random_choice = lambda a: np.random.choice(a) if a else [0]
@@ -70,21 +73,28 @@ def main(_):
     #       for pid, action in enumerate(chosen_actions)
     #   ])
     #   state.apply_actions(chosen_actions)
-    elif state.stage == 1:
+    else:
       # Decision node: sample action for the single current player
       action = random.choice(state.legal_actions(state.current_player()))
       action_string = state.action_to_string(state.current_player(), action)
       print("Player ", state.current_player(), ", randomly sampled action: ",
             action_string)
       state.apply_action(action)
-    elif state.stage == 2:
-      action = random.choice(state.legal_actions(state.current_player()))
-      action_string = state.action_to_string(state.current_player(), action)
-      print("Player ", state.current_player(), ", randomly sampled action: ",
-            action_string)
-      state.apply_action(action)
+      
+      print(state.current_action)
+      if state.current_action == Action.ACT:
+        print(state.action_board)
+        print(state.legal_actions(state.current_player()))
+        action = random.choice(state.legal_actions(state.current_player()))
+        print(action)
+        action_string = state.action_to_string(state.current_player(), action)
+        # print("Player ", state.current_player(), ", randomly sampled action: ", action_string)
+        state.apply_action(action)
+        print(state.action_board)
+        
     print(str(state))
 
+  # clear self.cards before initiate new action board
 
   # Game is now done. Print utilities for each player
   returns = state.returns()
