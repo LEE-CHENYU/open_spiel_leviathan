@@ -24,6 +24,8 @@ from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import exploitability
 from open_spiel.python.algorithms import policy_gradient
 
+from open_spiel.python.games.leviathan_game import _NUM_PLAYERS, Action, LevithanState
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer("num_episodes", int(1e6), "Number of train episodes.")
@@ -60,10 +62,11 @@ class PolicyGradientPolicies(policy.Policy):
 
 
 def main(_):
-  game = "kuhn_poker"
-  num_players = 2
+  game = "python_leviathan"
+  num_players = _NUM_PLAYERS
 
-  env_configs = {"players": num_players}
+  # env_configs = {"players": num_players}
+  env_configs = {}
   env = rl_environment.Environment(game, **env_configs)
   info_state_size = env.observation_spec()["info_state"][0]
   num_actions = env.action_spec()["num_actions"]
@@ -76,8 +79,11 @@ def main(_):
             idx,
             info_state_size,
             num_actions,
+            num_critic_before_pi = 4,
+            critic_learning_rate = 0.1,
+            pi_learning_rate = 0.01,
             loss_str=FLAGS.loss_str,
-            hidden_layers_sizes=(128,)) for idx in range(num_players)
+            hidden_layers_sizes=(16,)) for idx in range(num_players)
     ]
     expl_policies_avg = PolicyGradientPolicies(env, agents)
 
@@ -86,17 +92,24 @@ def main(_):
 
       if (ep + 1) % FLAGS.eval_every == 0:
         losses = [agent.loss for agent in agents]
-        expl = exploitability.exploitability(env.game, expl_policies_avg)
+        # expl = exploitability.exploitability(env.game, expl_policies_avg)
         msg = "-" * 80 + "\n"
-        msg += "{}: {}\n{}\n".format(ep + 1, expl, losses)
+        msg += "{}: {}\n".format(ep + 1, losses)
         logging.info("%s", msg)
-
+        # except:
+        #   pass 
+        
+      # if ep % 100 == 0:
+      #   print(ep)
       time_step = env.reset()
       while not time_step.last():
         player_id = time_step.observations["current_player"]
         agent_output = agents[player_id].step(time_step)
         action_list = [agent_output.action]
         time_step = env.step(action_list)
+        
+        if ep % 3000 == 0 and time_step.last():
+          print(env._state.action_board)
 
       # Episode is over, step all agents with final info state.
       for agent in agents:

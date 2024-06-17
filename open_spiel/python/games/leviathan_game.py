@@ -35,21 +35,22 @@ import pyspiel
 
 
 class Action(enum.IntEnum):
-  PASS = -7
-  ACT = -2
-  LEAD = -3
-  FOLLOW = -4
-  OFFER = -5
-  ATTACK = -6
+  PASS = 1
+  ACT = 2
+  LEAD = 3
+  FOLLOW = 4
+  OFFER = 5
+  ATTACK = 6
 
 class DynamicAction:
     @staticmethod
     def follow_chain(action_board):
         """Returns a list of available actions based on the action board."""
-        return [i for i, chain in enumerate(action_board)]
+        return [i+7 for i, chain in enumerate(action_board)]
       
-_NUM_PLAYERS = 3
-_DECK = frozenset([0, 1, 2])
+_NUM_PLAYERS = 10
+# _DECK = frozenset([0, 1, 2])
+_DECK =set(range(0, 10))
 _GAME_TYPE = pyspiel.GameType(
     short_name="python_leviathan",
     long_name="Python Leviathan",
@@ -72,7 +73,7 @@ _GAME_INFO = pyspiel.GameInfo(
     min_utility=-2.0,
     max_utility=2.0,
     utility_sum=None,
-    max_game_length=100)
+    max_game_length=10)
 
 
 class LevithanGame(pyspiel.Game):
@@ -85,11 +86,19 @@ class LevithanGame(pyspiel.Game):
     """Returns a state corresponding to the start of a game."""
     return LevithanState(self)
 
-  # def make_py_observer(self, iig_obs_type=None, params=None):
-  #   """Returns an object used for observing game state."""
-  #   return LevithanObserver(
-  #       iig_obs_type or pyspiel.IIGObservationType(perfect_recall=True),
-  #       params)
+  def make_py_observer(self, iig_obs_type=None, params=None):
+    """Returns an object used for observing game state."""
+
+    return LevithanObserver(
+        iig_obs_type or pyspiel.IIGObservationType(perfect_recall=True),
+            params)
+    
+  def num_distinct_actions(self):
+    return len(Action)+_NUM_PLAYERS
+        
+    # return LevithanObserver(
+    #     iig_obs_type or pyspiel.IIGObservationType(perfect_recall=True),
+    #     params)
 
 
 class LevithanState(pyspiel.State):
@@ -104,7 +113,7 @@ class LevithanState(pyspiel.State):
     # self.pot = [2.0, 1.0]
     self._game_over = False
     self._next_player = 0
-    self._NUM_PLAYERS = 3
+    self._NUM_PLAYERS = _NUM_PLAYERS
     self.round = 0
     self.current_action = None
 
@@ -136,7 +145,7 @@ class LevithanState(pyspiel.State):
     return [(o, p) for o in outcomes]
 
   def _check_game_over(self):
-    if self.round == 10:
+    if self.round > self._NUM_PLAYERS and self.current_player() == 1:
       self._game_over = True
   
   def _apply_action(self, action):
@@ -162,10 +171,9 @@ class LevithanState(pyspiel.State):
             # self.action_board[len(self.action_board)-1].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
             self.current_action = Action.LEAD
             self.stage = 1
-        elif action > 0:
-            chain_selection == action
-            print(chain_selection)
-            self.action_board[int(chain_selection)]
+        elif action > 6:
+            chain_selection = action-7
+            self.action_board[int(chain_selection)].append(agent_no)
             # self.action_board[int(chain_selection)].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
             self.current_action = Action.FOLLOW
             self.stage = 1
@@ -197,20 +205,78 @@ class LevithanState(pyspiel.State):
     # pot = self.pot
     # winnings = float(min(pot))
     if not self._game_over:
-      return [0., 0., 0.]
+      return [0.0] * self._NUM_PLAYERS
     # elif pot[0] > pot[1]:
     #   return [winnings, -winnings]
     # elif pot[0] < pot[1]:
     #   return [-winnings, winnings]
     # elif self.cards[0] > self.cards[1]:
     #   return [winnings, -winnings]
+    elif len(self.action_board)==0:
+      return [0] * self._NUM_PLAYERS
     else:
-      return [1, 1, 1]
+      reward_list = [0] * self._NUM_PLAYERS
+      for idx in self.action_board[0]:
+        reward_list[idx] = 1
+      return reward_list
+    
 
   def __str__(self):
     """String for debug purposes. No particular semantics are required."""
     return ""
+  
+  def last(self):
+    """Returns True if the game is over."""
+    return self.is_terminal()
 
+class LevithanObserver:
+    """Observer, conforming to the PyObserver interface (see observation.py)."""
+
+    def __init__(self, iig_obs_type, params):
+        """Initializes an empty observation tensor."""
+        if params:
+            raise ValueError(f"Observation parameters not supported; passed {params}")
+
+        # Determine which observation pieces we want to include.
+        pieces = [("player", _NUM_PLAYERS, (_NUM_PLAYERS,))]
+        pieces.append(("cards", len(_DECK), (len(_DECK),)))
+        pieces.append(("action_board", _NUM_PLAYERS, (_NUM_PLAYERS,)))
+
+        # Build the single flat tensor.
+        total_size = sum(size for name, size, shape in pieces)
+        self.tensor = np.zeros(total_size, np.float32)
+
+        # Build the named & reshaped views of the bits of the flat tensor.
+        self.dict = {}
+        index = 0
+        for name, size, shape in pieces:
+            self.dict[name] = self.tensor[index:index + size].reshape(shape)
+            index += size
+
+    def set_from(self, state, player):
+        """Updates `tensor` and `dict` to reflect `state` from PoV of `player`."""
+        self.tensor.fill(0)
+        if "player" in self.dict:
+            self.dict["player"][player] = 1
+        if "cards" in self.dict:
+            for card in state.cards:
+                self.dict["cards"][card] = 1
+        if "action_board" in self.dict:
+            for i, chain in enumerate(state.action_board):
+                for player in chain:
+                    self.dict["action_board"][i] = player
+
+    def string_from(self, state, player):
+        """Observation of `state` from the PoV of `player`, as a string."""
+        pieces = []
+        if "player" in self.dict:
+            pieces.append(f"p{player}")
+        if "cards" in self.dict:
+            pieces.append(f"cards:{state.cards}")
+        if "action_board" in self.dict:
+            pieces.append(f"action_board:{state.action_board}")
+        return " ".join(str(p) for p in pieces)
+      
 ## omit for the perfect information game.
 
 # class LevithanObserver:
