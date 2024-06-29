@@ -1770,6 +1770,7 @@ open_spiel/python/examples/discounted_cfr.py
 open_spiel/python/examples/dots_and_boxes_example.py
 open_spiel/python/examples/eva.py
 open_spiel/python/examples/example.py
+open_spiel/python/examples/example_leviathan.py
 open_spiel/python/examples/exploitability_descent.py
 open_spiel/python/examples/fictitious_play_example.py
 open_spiel/python/examples/gambit_example.py
@@ -1783,6 +1784,7 @@ open_spiel/python/examples/kuhn_nfsp.py
 open_spiel/python/examples/kuhn_poker_cfr.py
 open_spiel/python/examples/kuhn_policy_gradient.py
 open_spiel/python/examples/leduc_nfsp.py
+open_spiel/python/examples/leviathan_policy_gradient.py
 open_spiel/python/examples/lewis_signaling_dqn.py
 open_spiel/python/examples/lewis_signaling_qlearner.py
 open_spiel/python/examples/lp_solve_example.py
@@ -1804,6 +1806,7 @@ open_spiel/python/examples/play_via_console_example.py
 open_spiel/python/examples/playthrough.py
 open_spiel/python/examples/poker_fcpa_example.py
 open_spiel/python/examples/policy_aggregator_example.py
+open_spiel/python/examples/policy_gradient_leviathan.py
 open_spiel/python/examples/ppo_example.py
 open_spiel/python/examples/psro_v2_example.py
 open_spiel/python/examples/query_example.py
