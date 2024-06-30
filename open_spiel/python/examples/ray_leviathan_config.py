@@ -3,7 +3,7 @@ from absl import app, flags, logging
 
 from open_spiel.python import policy, rl_environment
 from open_spiel.python.algorithms import exploitability, policy_gradient
-from open_spiel.python.games.leviathan_game import _NUM_PLAYERS, Action, LevithanState
+from python.games.leviathan_game_v1 import _NUM_PLAYERS, Action, LevithanState
 
 from ray.tune.registry import register_env
 from ray.rllib.env.wrappers.open_spiel import OpenSpielEnv as OpenSpielEnvWrapper

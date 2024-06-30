@@ -24,7 +24,7 @@ from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import exploitability
 from open_spiel.python.algorithms import policy_gradient
 
-from open_spiel.python.games.leviathan_game import _NUM_PLAYERS, Action, LevithanState
+from python.games.leviathan_game_v1 import _NUM_PLAYERS, Action, LevithanState
 
 FLAGS = flags.FLAGS
 

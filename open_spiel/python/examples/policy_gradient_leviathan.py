@@ -2,7 +2,7 @@ import logging
 from absl import app
 from absl import flags
 
-from open_spiel.python.games import leviathan_game  # Import the Leviathan game
+from python.games import leviathan_game_v1  # Import the Leviathan game
 from open_spiel.python.pytorch import policy_gradient
 
 import pyspiel

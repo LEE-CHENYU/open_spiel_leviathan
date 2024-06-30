@@ -75,26 +75,18 @@ def main(_):
     #   state.apply_actions(chosen_actions)
     else:
       # Decision node: sample action for the single current player
-      action = random.choice(state.legal_actions(state.current_player()))
-      action_string = state.action_to_string(state.current_player(), action)
-      print("Player ", state.current_player(), ", randomly sampled action: ",
-            action_string)
-      state.apply_action(action)
-      
-      print(state.current_action)
-      if state.current_action == Action.ACT:
-        print(state.action_board)
-        print(state.legal_actions(state.current_player()))
+      is_self = True
+      while is_self:
         action = random.choice(state.legal_actions(state.current_player()))
-        print(action)
         action_string = state.action_to_string(state.current_player(), action)
-        # print("Player ", state.current_player(), ", randomly sampled action: ", action_string)
-        state.apply_action(action)
-        print(state.action_board)
+        print("Player ", state.current_player(), ", randomly sampled action: ",
+              action_string)
+        is_self = state.apply_action(action)
         
     print(str(state))
 
   # clear self.cards before initiate new action board
+  print(state.action_board)
 
   # Game is now done. Print utilities for each player
   returns = state.returns()

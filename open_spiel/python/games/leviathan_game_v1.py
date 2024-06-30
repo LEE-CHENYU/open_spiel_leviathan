@@ -1,3 +1,18 @@
+# Copyright 2019 DeepMind Technologies Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Lint as python3
 """Tuhn Poker implemented in Python.
 
 This is a simple demonstration of implementing a game in Python, featuring
@@ -18,38 +33,27 @@ import numpy as np
 
 import pyspiel
 
-_NUM_ACTIONS = 10
-_NUM_DYNA_ACTIONS = 4
-_NUM_PLAYERS = 10
+
 class Action(enum.IntEnum):
   PASS = 1
-  LEAD = 2
-  FOLLOW = 3
+  ACT = 2
+  LEAD = 3
+  FOLLOW = 4
+  OFFER = 5
+  ATTACK = 6
 
 class DynamicAction:
     @staticmethod
-    def lead_chain_offer(action_board):
-        return [_NUM_DYNA_ACTIONS * _NUM_PLAYERS * i + _NUM_ACTIONS for i, chain in enumerate(action_board)]
-    
-    @staticmethod
-    def lead_chain_attack(action_board):
-        return [_NUM_DYNA_ACTIONS * _NUM_PLAYERS * i + 1 + _NUM_ACTIONS for i, chain in enumerate(action_board)]
-  
-    @staticmethod
-    def follow_chain_offer(action_board):
+    def follow_chain(action_board):
         """Returns a list of available actions based on the action board."""
-        return [_NUM_DYNA_ACTIONS * _NUM_PLAYERS * i + 2 + _NUM_ACTIONS for i, chain in enumerate(action_board)]
+        return [i+7 for i, chain in enumerate(action_board)]
       
-    @staticmethod
-    def follow_chain_attack(action_board):
-        """Returns a list of available actions based on the action board."""
-        return [_NUM_DYNA_ACTIONS * _NUM_PLAYERS * i + 3 + _NUM_ACTIONS for i, chain in enumerate(action_board)]
-    
+_NUM_PLAYERS = 10
 # _DECK = frozenset([0, 1, 2])
 _DECK =set(range(0, 10))
 _GAME_TYPE = pyspiel.GameType(
-    short_name="python_leviathan",
-    long_name="Python Leviathan",
+    short_name="python_leviathan_v1",
+    long_name="Python Leviathan V1",
     dynamics=pyspiel.GameType.Dynamics.SEQUENTIAL,
     chance_mode=pyspiel.GameType.ChanceMode.EXPLICIT_STOCHASTIC,
     information=pyspiel.GameType.Information.PERFECT_INFORMATION,
@@ -104,13 +108,13 @@ class LevithanState(pyspiel.State):
     """Constructor; should only be called by Game.new_initial_state."""
     super().__init__(game)
     self.cards = []
-    self.action_board = [[]]
+    self.action_board = []
+    self.stage = 1
     # self.pot = [2.0, 1.0]
     self._game_over = False
     self._next_player = 0
     self._NUM_PLAYERS = _NUM_PLAYERS
     self.round = 0
-    self.is_interaction_decision = 0
     self.current_action = None
 
   # OpenSpiel (PySpiel) API functions are below. This is the standard set that
@@ -128,7 +132,10 @@ class LevithanState(pyspiel.State):
   def _legal_actions(self, player):
     """Returns a list of legal actions, sorted in ascending cards."""
     assert player >= 0
-    return [Action.PASS] + [i for i in range(10, 31) if i % 4 == 1 or 2] + DynamicAction.follow_chain_attack(self.action_board) + DynamicAction.follow_chain_offer(self.action_board)
+    if self.stage == 1:
+      return [Action.PASS, Action.ACT]
+    elif self.stage == 2:
+      return [Action.LEAD] + DynamicAction.follow_chain(self.action_board)
 
   def chance_outcomes(self):
     """Returns the possible chance outcomes and their probabilities."""
@@ -151,58 +158,43 @@ class LevithanState(pyspiel.State):
         self.cards.append(action)
     else:
         # Check if the agent decides to take an action or pass
-        if action == Action.PASS:
+        if action == Action.ACT:
+            # Check if the agent decides to lead or follow
+            self.current_action = Action.ACT
+            self.stage = 2
+        elif action == Action.PASS:
             self.current_action = Action.PASS
-        else:
-          chain_selection = (action - _NUM_ACTIONS) // (_NUM_DYNA_ACTIONS * _NUM_PLAYERS) ## 算回去
-          decoded_index = (action - _NUM_ACTIONS) % (_NUM_DYNA_ACTIONS * _NUM_PLAYERS)
-          dynamic_action_code = decoded_index % 4
-          target_no = decoded_index % _NUM_PLAYERS 
-          is_offer = dynamic_action_code % 2 == 0
-          
-          if target_no == agent_no:
-            return False
-          
-          if dynamic_action_code < 2:
-            action_type = 'lead'
-          else:
-            action_type = 'follow'
-              
-          if action_type == 'lead':
-            
-              if is_offer:
-                  self.action_board.append([['offer', agent_no, target_no]])
-              else:
-                  self.action_board.append([['attack', agent_no, target_no]])
-              
-              self.current_action = Action.LEAD
-              
-          elif action_type == 'follow':
-              
-              if is_offer:
-                  self.action_board[int(chain_selection)].append(['offer', agent_no, target_no])
-              else:
-                  self.action_board[int(chain_selection)].append(['attack', agent_no, target_no])
-
-              self.current_action = Action.FOLLOW
+            self.stage = 1
+        elif action == Action.LEAD:
+            self.action_board.append([])
+            self.action_board[len(self.action_board)-1].append(agent_no)
+            # self.action_board[len(self.action_board)-1].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
+            self.current_action = Action.LEAD
+            self.stage = 1
+        elif action > 6:
+            chain_selection = action-7
+            self.action_board[int(chain_selection)].append(agent_no)
+            # self.action_board[int(chain_selection)].append([action_details["action_type"], agent_no, action_details["target_agent_no"]])
+            self.current_action = Action.FOLLOW
+            self.stage = 1
 
         # Update the next player
-        self._next_player = (self._next_player + 1) % self._NUM_PLAYERS
-        self.round += 1
-        # self.current_action = None
+        if self.current_action != Action.ACT:
+          self._next_player = (self._next_player + 1) % self._NUM_PLAYERS
+          self.round += 1
+          self.current_action = None
 
         # Check if the game is over
         self._check_game_over()
-        
-        return target_no == agent_no
 
   def _action_to_string(self, player, action):
     """Action -> string."""
-    
     if player == pyspiel.PlayerId.CHANCE:
       return f"Deal:{action}"
+    elif action == Action.PASS:
+      return "Pass"
     else:
-      return str(action)
+      return "ACT"
 
   def is_terminal(self):
     """Returns True if the game is over."""
@@ -286,6 +278,62 @@ class LevithanObserver:
         return " ".join(str(p) for p in pieces)
       
 ## omit for the perfect information game.
+
+# class LevithanObserver:
+#   """Observer, conforming to the PyObserver interface (see observation.py)."""
+
+#   def __init__(self, iig_obs_type, params):
+#     """Initializes an empty observation tensor."""
+#     if params:
+#       raise ValueError(f"Observation parameters not supported; passed {params}")
+
+#     # Determine which observation pieces we want to include.
+#     pieces = [("player", 2, (2,))]
+#     if iig_obs_type.private_info == pyspiel.PrivateInfoType.SINGLE_PLAYER:
+#       pieces.append(("private_card", 3, (3,)))
+#     if iig_obs_type.public_info:
+#       if iig_obs_type.perfect_recall:
+#         pieces.append(("betting", 6, (3, 2)))
+#       else:
+#         pieces.append(("pot_contribution", 2, (2,)))
+
+#     # Build the single flat tensor.
+#     total_size = sum(size for name, size, shape in pieces)
+#     self.tensor = np.zeros(total_size, np.float32)
+
+#     # Build the named & reshaped views of the bits of the flat tensor.
+#     self.dict = {}
+#     index = 0
+#     for name, size, shape in pieces:
+#       self.dict[name] = self.tensor[index:index + size].reshape(shape)
+#       index += size
+
+#   def set_from(self, state, player):
+#     """Updates `tensor` and `dict` to reflect `state` from PoV of `player`."""
+#     self.tensor.fill(0)
+#     if "player" in self.dict:
+#       self.dict["player"][player] = 1
+#     if "private_card" in self.dict and len(state.cards) > player:
+#       self.dict["private_card"][state.cards[player]] = 1
+#     if "pot_contribution" in self.dict:
+#       self.dict["pot_contribution"][:] = state.pot
+#     if "betting" in self.dict:
+#       for turn, action in enumerate(state.bets):
+#         self.dict["betting"][turn, action] = 1
+
+#   def string_from(self, state, player):
+#     """Observation of `state` from the PoV of `player`, as a string."""
+#     pieces = []
+#     if "player" in self.dict:
+#       pieces.append(f"p{player}")
+#     if "private_card" in self.dict and len(state.cards) > player:
+#       pieces.append(f"card:{state.cards[player]}")
+#     if "pot_contribution" in self.dict:
+#       pieces.append(f"pot[{int(state.pot[0])} {int(state.pot[1])}]")
+#     if "betting" in self.dict and state.bets:
+#       pieces.append("".join("pb"[b] for b in state.bets))
+#     return " ".join(str(p) for p in pieces)
+
 
 # Register the game with the OpenSpiel library
 
